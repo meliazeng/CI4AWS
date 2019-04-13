@@ -16,6 +16,9 @@ Parameters:
   S3Bucket:
     Description: S3 Bucket, which will hold the artifacts
     Type: String
+  S3WebsiteBucket:
+    Description: S3 Bucket, which will hold the Website
+    Type: String
   TestAccount:
     Description: AWS AccountNumber for test
     Type: Number
@@ -86,7 +89,7 @@ Resources:
   BuildProject:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: !Ref ProjectName
+      Name: !Sub ${ProjectName}-Sam
       Description: !Ref ProjectName
       EncryptionKey: !Ref CMKARN
       ServiceRole: !GetAtt BuildProjectRole.Arn
@@ -114,6 +117,7 @@ Resources:
                 - npm install || (cat /root/.npm/_logs/*-debug.log && false)
             build:
               commands:
+                - echo Build started on `date`
                 - aws cloudformation package --template-file template.yaml --s3-bucket $S3Bucket --s3-prefix $ProjectName/codebuild --output-template-file samtemplate.yaml
           artifacts:
             files: samtemplate.yaml
@@ -123,6 +127,50 @@ Resources:
       Tags:
         - Key: Name
           Value: !Ref ProjectName
+
+  BuildProjectWebsite:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Sub ${ProjectName}-Website
+      Description: !Ref ProjectName
+      EncryptionKey: !Ref CMKARN
+      ServiceRole: !GetAtt BuildProjectRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: linuxContainer
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/ubuntu-base:14.04-1.6.0
+        EnvironmentVariables:
+          - Name: S3Bucket
+            Value: !Ref S3Bucket
+          - Name: KMSKey
+            Value: !Ref CMKARN
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: |
+          version: 0.1
+          phases:
+            install:
+              commands:
+                - echo Installing source NPM dependencies..
+                - npm install
+                - npm install -g @angular/cli
+            build:
+              commands:
+                - echo Build started on `date`
+                - ng build
+          artifacts:
+            files: '**/*'
+            base-directory: 'dist*'
+            discard-paths: yes
+
+      TimeoutInMinutes: 10
+      Tags:
+        - Key: Name
+          Value: !Ref ProjectName
+          
+
   PipeLineRole:
     Type: AWS::IAM::Role
     Properties:
@@ -210,7 +258,8 @@ Resources:
       Stages:
         - Name: Source
           Actions:
-            - Name: App
+            - 
+              Name: App-Sam
               ActionTypeId:
                 category: Source
                 owner: ThirdParty
@@ -224,12 +273,31 @@ Resources:
                 PollForSourceChanges: 'false'
                 Repo: awssam
               OutputArtifacts:
-              - Name: SCCheckoutArtifact
+              - Name: SamCheckoutArtifact
+              inputArtifacts: []
+              region: us-west-2
+            -
+              Name: App-Website
+              ActionTypeId:
+                category: Source
+                owner: ThirdParty
+                provider: GitHub
+                version: '1'
+              RunOrder: 2
+              Configuration:
+                Branch: master
+                OAuthToken: "****"
+                Owner: meliazeng
+                PollForSourceChanges: 'false'
+                Repo: awswebsite
+              OutputArtifacts:
+              - Name: WebsiteCheckoutArtifact
               inputArtifacts: []
               region: us-west-2
         - Name: Build
           Actions:
-          - Name: Build
+          -
+            Name: Build-sam
             ActionTypeId:
               Category: Build
               Owner: AWS
@@ -239,24 +307,53 @@ Resources:
               ProjectName: !Ref BuildProject
             RunOrder: 1
             InputArtifacts:
-              - Name: SCCheckoutArtifact
+              - Name: SamCheckoutArtifact
             OutputArtifacts:
-              - Name: BuildOutput
+              - Name: BuildOutput-Sam
+          - 
+            Name: Build-Website
+            ActionTypeId:
+              Category: Build
+              Owner: AWS
+              Version: 1
+              Provider: CodeBuild
+            Configuration:
+              ProjectName: !Ref BuildProjectWebsite
+            RunOrder: 2
+            InputArtifacts:
+              - Name: WebsiteCheckoutArtifact
+            OutputArtifacts:
+              - Name: BuildOutput-Website
             #REMOVE:RoleArn: arn:aws:iam::485873893626:role/ToolsAcctCodePipelineCodeCommitRole
         - Name: DeployToTest
           Actions:
-            - Name: CreateChangeSetTest
+            - 
+              Name: deploys3
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: S3
+                Version: '1'
+              RunOrder: 1
+              Configuration:
+                BucketName: !Ref S3WebsiteBucket
+                Extract: 'true'
+              InputArtifacts:
+              - name: BuildOutput-Website
+              region: us-west-2
+            - 
+              Name: CreateChangeSetTest
               ActionTypeId:
                 Category: Deploy
                 Owner: AWS
                 Version: 1
                 Provider: CloudFormation
               Configuration:
-                ChangeSetName: sample-lambda-dev
+                ChangeSetName: !Sub ${ProjectName}-Sam-Test
                 ActionMode: CHANGE_SET_REPLACE
-                StackName: sample-lambda-dev
+                StackName: !Sub ${ProjectName}-Sam-Test
                 Capabilities: CAPABILITY_NAMED_IAM
-                TemplatePath: BuildOutput::samtemplate.yaml
+                TemplatePath: BuildOutput-Sam::samtemplate.yaml
                 #RoleArn: !Sub arn:aws:iam::${TestAccount}:role/cloudformationdeployer-role
                 RoleArn:
                   Fn::If:
@@ -264,8 +361,8 @@ Resources:
                   - !Sub arn:aws:iam::${TestAccount}:role/cloudformationdeployer-role
                   - !Ref AWS::NoValue
               InputArtifacts:
-                - Name: BuildOutput
-              RunOrder: 1
+                - Name: BuildOutput-Sam
+              RunOrder: 2
               #RoleArn: !Sub arn:aws:iam::${TestAccount}:role/ToolsAcctCodePipelineCloudFormationRole
               RoleArn:
                   Fn::If:
@@ -279,9 +376,9 @@ Resources:
                 Version: 1
                 Provider: CloudFormation
               Configuration:
-                ChangeSetName: sample-lambda-dev
+                ChangeSetName: !Sub ${ProjectName}-Sam-Test
                 ActionMode: CHANGE_SET_EXECUTE
-                StackName: sample-lambda-dev
+                StackName: !Sub ${ProjectName}-Sam-Test
                 #RoleArn: !Sub arn:aws:iam::${TestAccount}:role/cloudformationdeployer-role
                 RoleArn:
                   Fn::If:
@@ -289,8 +386,8 @@ Resources:
                   - !Sub arn:aws:iam::${TestAccount}:role/cloudformationdeployer-role
                   - !Ref AWS::NoValue
               InputArtifacts:
-                - Name: BuildOutput
-              RunOrder: 2
+                - Name: BuildOutput-Sam
+              RunOrder: 3
               #RoleArn: !Sub arn:aws:iam::${TestAccount}:role/ToolsAcctCodePipelineCloudFormationRole
               RoleArn:
                   Fn::If:
@@ -306,11 +403,11 @@ Resources:
                 Version: 1
                 Provider: CloudFormation
               Configuration:
-                ChangeSetName: sample-lambda-test
+                ChangeSetName: !Sub ${ProjectName}-Sam-Prod
                 ActionMode: CHANGE_SET_REPLACE
-                StackName: sample-lambda-test
+                StackName: !Sub ${ProjectName}-Sam-Prod
                 Capabilities: CAPABILITY_NAMED_IAM
-                TemplatePath: BuildOutput::samtemplate.yaml
+                TemplatePath: BuildOutput-Sam::samtemplate.yaml
                 #RoleArn: !Sub arn:aws:iam::${ProductionAccount}:role/cloudformationdeployer-role
                 RoleArn:
                   Fn::If:
@@ -318,7 +415,7 @@ Resources:
                   - !Sub arn:aws:iam::${ProductionAccount}:role/cloudformationdeployer-role
                   - !Ref AWS::NoValue
               InputArtifacts:
-                - Name: BuildOutput
+                - Name: BuildOutput-Sam
               RunOrder: 1
               #RoleArn: !Sub arn:aws:iam::${ProductionAccount}:role/ToolsAcctCodePipelineCloudFormationRole
               RoleArn:
@@ -333,9 +430,9 @@ Resources:
                 Version: 1
                 Provider: CloudFormation
               Configuration:
-                ChangeSetName: sample-lambda-test
+                ChangeSetName: !Sub ${ProjectName}-Sam-Prod
                 ActionMode: CHANGE_SET_EXECUTE
-                StackName: sample-lambda-test
+                StackName: !Sub ${ProjectName}-Sam-Prod
                 #RoleArn: !Sub arn:aws:iam::${ProductionAccount}:role/cloudformationdeployer-role
                 RoleArn:
                   Fn::If:
@@ -343,7 +440,7 @@ Resources:
                   - !Sub arn:aws:iam::${ProductionAccount}:role/cloudformationdeployer-role
                   - !Ref AWS::NoValue
               InputArtifacts:
-                - Name: BuildOutput
+                - Name: BuildOutput-Sam
               RunOrder: 2
               #RoleArn: !Sub arn:aws:iam::${ProductionAccount}:role/ToolsAcctCodePipelineCloudFormationRole
               RoleArn:
