@@ -16,9 +16,6 @@ Parameters:
   S3Bucket:
     Description: S3 Bucket, which will hold the artifacts
     Type: String
-  DevAccount:
-    Description: AWS AccountNumber for dev
-    Type: Number
   TestAccount:
     Description: AWS AccountNumber for test
     Type: Number
@@ -98,7 +95,7 @@ Resources:
       Environment:
         Type: linuxContainer
         ComputeType: BUILD_GENERAL1_SMALL
-        Image: aws/codebuild/python:2.7.12
+        Image: aws/codebuild/nodejs:8.11.0-1.6.0
         EnvironmentVariables:
           - Name: S3Bucket
             Value: !Ref S3Bucket
@@ -214,27 +211,24 @@ Resources:
           Actions:
             - Name: App
               ActionTypeId:
-                Category: Source
-                Owner: AWS
-                Version: 1
-                Provider: CodeCommit
-              Configuration:
-                RepositoryName: !Ref ProjectName
-                BranchName: master
-              OutputArtifacts:
-                - Name: SCCheckoutArtifact
+                category: Source
+                owner: ThirdParty
+                provider: GitHub
+                version: '1'
               RunOrder: 1
-              #RoleArn: !Sub arn:aws:iam::${DevAccount}:role/ToolsAcctCodePipelineCodeCommitRole
-              RoleArn:
-                  Fn::If:
-                  - AddCodeBuildResource
-                  - !Sub arn:aws:iam::${DevAccount}:role/ToolsAcctCodePipelineCodeCommitRole
-                  - !Ref AWS::NoValue
-        -
-          Name: Build
+              Configuration:
+                Branch: master
+                OAuthToken: "****"
+                Owner: meliazeng
+                PollForSourceChanges: 'false'
+                Repo: awssam
+              OutputArtifacts:
+              - Name: SCCheckoutArtifact
+              inputArtifacts: []
+              region: us-west-2
+        - Name: Build
           Actions:
-          -
-            Name: Build
+          - Name: Build
             ActionTypeId:
               Category: Build
               Owner: AWS
