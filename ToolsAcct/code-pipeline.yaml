@@ -16,8 +16,14 @@ Parameters:
   S3Bucket:
     Description: S3 Bucket, which will hold the artifacts
     Type: String
-  S3WebsiteBucket:
-    Description: S3 Bucket, which will hold the Website
+  S3WebsiteBucketTest:
+    Description: S3 Bucket, which will hold the Website; created by other stack.
+    Type: String
+  S3WebsiteBucketProd:
+    Description: S3 Bucket, which will hold the Website; created by other stack.
+    Type: String
+  S3CIBucket:
+    Description: S3 Bucket, for triggering CL; created by other stack.
     Type: String
   TestAccount:
     Description: AWS AccountNumber for test
@@ -283,7 +289,7 @@ Resources:
                 owner: ThirdParty
                 provider: GitHub
                 version: '1'
-              RunOrder: 2
+              RunOrder: 1
               Configuration:
                 Branch: master
                 OAuthToken: "****"
@@ -336,8 +342,13 @@ Resources:
                 Version: '1'
               RunOrder: 1
               Configuration:
-                BucketName: !Ref S3WebsiteBucket
+                BucketName: !Ref S3WebsiteBucketTest
                 Extract: 'true'
+                RoleArn:
+                  Fn::If:
+                  - AddCodeBuildResource
+                  - !Sub arn:aws:iam::${TestAccount}:role/S3deployer-role
+                  - !Ref AWS::NoValue
               InputArtifacts:
               - name: BuildOutput-Website
               region: us-west-2
@@ -387,6 +398,8 @@ Resources:
                   - !Ref AWS::NoValue
               InputArtifacts:
                 - Name: BuildOutput-Sam
+              OutputArtifacts: 
+                - Name: DeployOutput-Sam
               RunOrder: 3
               #RoleArn: !Sub arn:aws:iam::${TestAccount}:role/ToolsAcctCodePipelineCloudFormationRole
               RoleArn:
@@ -394,8 +407,42 @@ Resources:
                   - AddCodeBuildResource
                   - !Sub arn:aws:iam::${TestAccount}:role/ToolsAcctCodePipelineCloudFormationRole
                   - !Ref AWS::NoValue
+                  
+            - Name: OutputToCI
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: S3
+                Version: '1'
+              RunOrder: 2
+              Configuration:
+                BucketName: !Ref S3CIBucket
+                Extract: 'true'
+              InputArtifacts:
+                - name: DeployOutput-Sam
+              Region: us-east-1
+      
         - Name: DeployToProduction
           Actions:
+            - 
+              Name: deploys3
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: S3
+                Version: '1'
+              RunOrder: 1
+              Configuration:
+                BucketName: !Ref S3WebsiteBucketTest
+                Extract: 'true'
+                RoleArn:
+                  Fn::If:
+                  - AddCodeBuildResource
+                  - !Sub arn:aws:iam::${ProductionAccount}:role/S3deployer-role
+                  - !Ref AWS::NoValue
+              InputArtifacts:
+              - name: BuildOutput-Website
+              region: us-west-2          
             - Name: CreateChangeSetProd
               ActionTypeId:
                 Category: Deploy

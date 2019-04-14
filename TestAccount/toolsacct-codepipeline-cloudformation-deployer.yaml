@@ -9,6 +9,9 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Role to be assumed by CodePipeline service cross account
 Parameters:
+  S3BucketWebsite:
+    Description: S3 Bucket for hosting website.
+    Type: String 
   S3Bucket:
     Description: S3 Bucket in Tools Account, which holds the artifacts built by codebuild
     Type: String
@@ -113,3 +116,22 @@ Resources:
       Roles:
         -
           !Ref CFDeployerRole
+  S3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3BucketWebsite
+      PolicyDocument:
+        Statement:
+          -
+            Action:
+              - s3:*
+            Effect: Allow
+            Resource:
+              - !Sub arn:aws:s3:::${S3Bucket}
+              - !Sub arn:aws:s3:::${S3Bucket}/*
+            Principal:
+              AWS:
+                - !Sub arn:aws:iam::${ToolsAccount}:role/ToolsAcctCodePipelineDeployRole
+
+          
+       
