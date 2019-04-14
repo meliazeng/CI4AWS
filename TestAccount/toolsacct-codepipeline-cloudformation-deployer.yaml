@@ -9,9 +9,14 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Role to be assumed by CodePipeline service cross account
 Parameters:
+  ProjectName:
+    Description: Name of the Project
+    Type: String
+    Default: ProfoundImpact
   S3BucketWebsite:
     Description: S3 Bucket for hosting website.
     Type: String 
+    Default: WebHostBucket
   S3Bucket:
     Description: S3 Bucket in Tools Account, which holds the artifacts built by codebuild
     Type: String
@@ -127,11 +132,11 @@ Resources:
               - s3:*
             Effect: Allow
             Resource:
-              - !Sub arn:aws:s3:::${S3Bucket}
-              - !Sub arn:aws:s3:::${S3Bucket}/*
+              - !Sub arn:aws:s3:::${S3BucketWebsite}
+              - !Sub arn:aws:s3:::${S3BucketWebsite}/*
             Principal:
               AWS:
-                - !Sub arn:aws:iam::${ToolsAccount}:role/ToolsAcctCodePipelineDeployRole
+                - !Sub arn:aws:iam::${ToolsAccount}:role/${ProjectName}-codepipeline-role
 
           
        

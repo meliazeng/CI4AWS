@@ -12,16 +12,14 @@ Parameters:
   ProjectName:
     Description: Name of the Project
     Type: String
-    Default: sample-lambda
+    Default: ProfoundImpact
   S3Bucket:
     Description: S3 Bucket, which will hold the artifacts
     Type: String
-  S3WebsiteBucketTest:
-    Description: S3 Bucket, which will hold the Website; created by other stack.
-    Type: String
-  S3WebsiteBucketProd:
-    Description: S3 Bucket, which will hold the Website; created by other stack.
-    Type: String
+  S3BucketWebsite:
+    Description: S3 Bucket for hosting website.
+    Type: String 
+    Default: WebHostBucket
   S3CIBucket:
     Description: S3 Bucket, for triggering CL; created by other stack.
     Type: String
@@ -249,7 +247,6 @@ Resources:
             Action:
               - sts:AssumeRole
             Resource:
-              - !Sub arn:aws:iam::${DevAccount}:role/ToolsAcctCodePipelineCodeCommitRole
               - !Sub arn:aws:iam::${ProductionAccount}:role/ToolsAcctCodePipelineCloudFormationRole
               - !Sub arn:aws:iam::${TestAccount}:role/ToolsAcctCodePipelineCloudFormationRole
 
@@ -342,12 +339,12 @@ Resources:
                 Version: '1'
               RunOrder: 1
               Configuration:
-                BucketName: !Ref S3WebsiteBucketTest
+                BucketName: !Ref S3BucketWebsite
                 Extract: 'true'
                 RoleArn:
                   Fn::If:
                   - AddCodeBuildResource
-                  - !Sub arn:aws:iam::${TestAccount}:role/S3deployer-role
+                  - !Sub arn:aws:iam::${TestAccount}:role/ToolsAcctCodePipelineCloudFormationRole
                   - !Ref AWS::NoValue
               InputArtifacts:
               - name: BuildOutput-Website
@@ -433,12 +430,12 @@ Resources:
                 Version: '1'
               RunOrder: 1
               Configuration:
-                BucketName: !Ref S3WebsiteBucketTest
+                BucketName: !Ref S3BucketWebsite
                 Extract: 'true'
                 RoleArn:
                   Fn::If:
                   - AddCodeBuildResource
-                  - !Sub arn:aws:iam::${ProductionAccount}:role/S3deployer-role
+                  - !Sub arn:aws:iam::${ProductionAccount}:role/cloudformationdeployer-role
                   - !Ref AWS::NoValue
               InputArtifacts:
               - name: BuildOutput-Website
