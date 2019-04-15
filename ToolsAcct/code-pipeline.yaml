@@ -19,7 +19,7 @@ Parameters:
   S3BucketWebsite:
     Description: S3 Bucket for hosting website.
     Type: String 
-    Default: WebHostBucket
+    Default: bucketwebsite
   S3CIBucket:
     Description: S3 Bucket, for triggering CL; created by other stack.
     Type: String
@@ -264,39 +264,35 @@ Resources:
             - 
               Name: App-Sam
               ActionTypeId:
-                category: Source
-                owner: ThirdParty
-                provider: GitHub
-                version: '1'
+                Category: Source
+                Owner: ThirdParty
+                Provider: GitHub
+                Version: '1'
               RunOrder: 1
               Configuration:
                 Branch: master
-                OAuthToken: "****"
+                OAuthToken: 'cd9152c077ff4561f986fb430f771e6a6683c6a9'
                 Owner: meliazeng
                 PollForSourceChanges: 'false'
                 Repo: awssam
               OutputArtifacts:
               - Name: SamCheckoutArtifact
-              inputArtifacts: []
-              region: us-west-2
             -
               Name: App-Website
               ActionTypeId:
-                category: Source
-                owner: ThirdParty
-                provider: GitHub
-                version: '1'
+                Category: Source
+                Owner: ThirdParty
+                Provider: GitHub
+                Version: '1'
               RunOrder: 1
               Configuration:
                 Branch: master
-                OAuthToken: "****"
+                OAuthToken: 'cd9152c077ff4561f986fb430f771e6a6683c6a9'
                 Owner: meliazeng
                 PollForSourceChanges: 'false'
-                Repo: awswebsite
+                Repo: ChkLst
               OutputArtifacts:
               - Name: WebsiteCheckoutArtifact
-              inputArtifacts: []
-              region: us-west-2
         - Name: Build
           Actions:
           -
@@ -339,7 +335,7 @@ Resources:
                 Version: '1'
               RunOrder: 1
               Configuration:
-                BucketName: !Ref S3BucketWebsite
+                BucketName: !Sub ${S3BucketWebsite}123
                 Extract: 'true'
                 RoleArn:
                   Fn::If:
@@ -347,8 +343,8 @@ Resources:
                   - !Sub arn:aws:iam::${TestAccount}:role/ToolsAcctCodePipelineCloudFormationRole
                   - !Ref AWS::NoValue
               InputArtifacts:
-              - name: BuildOutput-Website
-              region: us-west-2
+              - Name: BuildOutput-Website
+              Region: us-west-2
             - 
               Name: CreateChangeSetTest
               ActionTypeId:
@@ -411,13 +407,13 @@ Resources:
                 Owner: AWS
                 Provider: S3
                 Version: '1'
-              RunOrder: 2
+              RunOrder: 4
               Configuration:
                 BucketName: !Ref S3CIBucket
                 Extract: 'true'
               InputArtifacts:
-                - name: DeployOutput-Sam
-              Region: us-east-1
+                - Name: DeployOutput-Sam
+              Region: us-west-2
       
         - Name: DeployToProduction
           Actions:
@@ -430,7 +426,7 @@ Resources:
                 Version: '1'
               RunOrder: 1
               Configuration:
-                BucketName: !Ref S3BucketWebsite
+                BucketName: !Sub ${S3BucketWebsite}321
                 Extract: 'true'
                 RoleArn:
                   Fn::If:
@@ -438,8 +434,8 @@ Resources:
                   - !Sub arn:aws:iam::${ProductionAccount}:role/cloudformationdeployer-role
                   - !Ref AWS::NoValue
               InputArtifacts:
-              - name: BuildOutput-Website
-              region: us-west-2          
+              - Name: BuildOutput-Website
+              Region: us-west-2          
             - Name: CreateChangeSetProd
               ActionTypeId:
                 Category: Deploy
