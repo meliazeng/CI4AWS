@@ -271,8 +271,8 @@ Resources:
               RunOrder: 1
               Configuration:
                 Branch: master
-                OAuthToken: 'cd9152c077ff4561f986fb430f771e6a6683c6a9'
-                Owner: meliazeng
+                OAuthToken: '***'
+                Owner: test
                 PollForSourceChanges: 'false'
                 Repo: awssam
               OutputArtifacts:
@@ -287,8 +287,8 @@ Resources:
               RunOrder: 1
               Configuration:
                 Branch: master
-                OAuthToken: 'cd9152c077ff4561f986fb430f771e6a6683c6a9'
-                Owner: meliazeng
+                OAuthToken: '***'
+                Owner: test
                 PollForSourceChanges: 'false'
                 Repo: ChkLst
               OutputArtifacts:
