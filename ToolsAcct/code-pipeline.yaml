@@ -198,6 +198,15 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
+          - 
+            Effect: Allow
+            Action: 
+              - s3:*
+            Resource:
+              - !Sub arn:aws:s3:::${S3BucketWebsite}123
+              - !Sub arn:aws:s3:::${S3Bucket}123/*
+              - !Sub arn:aws:s3:::${S3BucketWebsite}321
+              - !Sub arn:aws:s3:::${S3Bucket}321/*              
           -
             Effect: Allow
             Action:
@@ -337,11 +346,6 @@ Resources:
               Configuration:
                 BucketName: !Sub ${S3BucketWebsite}123
                 Extract: 'true'
-                RoleArn:
-                  Fn::If:
-                  - AddCodeBuildResource
-                  - !Sub arn:aws:iam::${TestAccount}:role/ToolsAcctCodePipelineCloudFormationRole
-                  - !Ref AWS::NoValue
               InputArtifacts:
               - Name: BuildOutput-Website
               Region: us-west-2
@@ -428,11 +432,6 @@ Resources:
               Configuration:
                 BucketName: !Sub ${S3BucketWebsite}321
                 Extract: 'true'
-                RoleArn:
-                  Fn::If:
-                  - AddCodeBuildResource
-                  - !Sub arn:aws:iam::${ProductionAccount}:role/cloudformationdeployer-role
-                  - !Ref AWS::NoValue
               InputArtifacts:
               - Name: BuildOutput-Website
               Region: us-west-2          
@@ -515,3 +514,4 @@ Resources:
                 - !Sub arn:aws:iam::${ProductionAccount}:role/ToolsAcctCodePipelineCloudFormationRole
                 - !Sub arn:aws:iam::${ProductionAccount}:role/cloudformationdeployer-role
                 - !GetAtt [BuildProjectRole,Arn]
+

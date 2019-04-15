@@ -1,0 +1,33 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Role to be assumed by CodePipeline service cross account
+Parameters:
+  ProjectName:
+    Description: Name of the Project
+    Type: String
+    Default: ProfoundImpact
+  S3BucketWebsite:
+    Description: S3 Bucket for hosting website.
+    Type: String 
+    Default: WebHostBucket
+  ToolsAccount:
+    Description: AWS AccountNumber for Tools
+    Type: Number
+Resources:
+
+
+  S3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3BucketWebsite
+      PolicyDocument:
+        Statement:
+          -
+            Action:
+              - s3:*
+            Effect: Allow
+            Resource:
+              - !Sub arn:aws:s3:::${S3BucketWebsite}
+              - !Sub arn:aws:s3:::${S3BucketWebsite}/*
+            Principal:
+              AWS:
+                - !Sub arn:aws:iam::${ToolsAccount}:role/${ProjectName}-codepipeline-role

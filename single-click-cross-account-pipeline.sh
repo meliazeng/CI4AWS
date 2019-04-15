@@ -12,7 +12,7 @@ read ProdAccount
 echo -n "Enter ProdAccount ProfileName for AWS Cli operations> "
 read ProdAccountProfile
 
-aws cloudformation deploy --stack-name pre-reqs --template-file ToolsAcct/pre-reqs.yaml --parameter-overrides TestAccount=$TestAccount ProductionAccount=$ProdAccount --profile $ToolsAccountProfile
+aws cloudformation deploy --stack-name pre-reqs --template-file ToolsAcct/pre-reqs.yaml --parameter-overrides TestAccount=$TestAccount ProductionAccount=$ProdAccount --profile $ToolsAccountProfile --
 echo -n "Enter S3 Bucket created from above > "
 read S3Bucket
 
@@ -31,6 +31,12 @@ aws cloudformation deploy --stack-name sample-lambda-pipeline --template-file To
 
 echo -n "Adding Permissions to the CMK"
 aws cloudformation deploy --stack-name pre-reqs --template-file ToolsAcct/pre-reqs.yaml --parameter-overrides CodeBuildCondition=true --profile $ToolsAccountProfile
+
+echo -n "Executing in TEST Account for S3 policy"
+aws cloudformation deploy --stack-name toolsacct-S3-policy --template-file TestAccount/apply-s3-policy-after-pipeline-role.yaml --capabilities CAPABILITY_NAMED_IAM --parameter-overrides ToolsAccount=$ToolsAccount S3BucketWebsite=bucketwebsite123 --profile $TestAccountProfile
+
+echo -n "Executing in PROD Account for S3 policy"
+aws cloudformation deploy --stack-name toolsacct-S3-policy --template-file TestAccount/apply-s3-policy-after-pipeline-role.yaml --capabilities CAPABILITY_NAMED_IAM --parameter-overrides ToolsAccount=$ToolsAccount S3BucketWebsite=$bucketwebsite321 --profile $ProdAccountProfile
 
 echo -n "Adding Permissions to the Cross Accounts"
 aws cloudformation deploy --stack-name sample-lambda-pipeline --template-file ToolsAcct/code-pipeline.yaml --parameter-overrides CrossAccountCondition=true --capabilities CAPABILITY_NAMED_IAM --profile $ToolsAccountProfile
