@@ -514,7 +514,6 @@ Resources:
               - !Sub arn:aws:s3:::${S3Bucket}/*
             Principal:
               AWS:
-                - !Sub arn:aws:iam::${DevAccount}:role/ToolsAcctCodePipelineCodeCommitRole
                 - !Sub arn:aws:iam::${TestAccount}:role/ToolsAcctCodePipelineCloudFormationRole
                 - !Sub arn:aws:iam::${TestAccount}:role/cloudformationdeployer-role
                 - !Sub arn:aws:iam::${ProductionAccount}:role/ToolsAcctCodePipelineCloudFormationRole
