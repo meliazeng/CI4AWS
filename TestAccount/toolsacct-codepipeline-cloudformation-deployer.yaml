@@ -13,10 +13,6 @@ Parameters:
     Description: Name of the Project
     Type: String
     Default: ProfoundImpact
-  S3BucketWebsite:
-    Description: S3 Bucket for hosting website.
-    Type: String 
-    Default: WebHostBucket
   S3Bucket:
     Description: S3 Bucket in Tools Account, which holds the artifacts built by codebuild
     Type: String
@@ -98,6 +94,7 @@ Resources:
               - lambda:GetFunctionConfiguration
               - lambda:GetFunction
               - lambda:UpdateFunctionConfiguration
+              - apigateway:*
               - events:* # Required for the sample lambda function to work
               - iam:CreateRole
               - iam:CreatePolicy
@@ -106,6 +103,8 @@ Resources:
               - iam:PutRolePolicy
               - iam:PassRole
               - iam:DeleteRolePolicy
+              - iam:DetachRolePolicy
+              - iam:AttachRolePolicy
               - cloudformation:*
             Resource: "*"
           -
@@ -121,22 +120,6 @@ Resources:
       Roles:
         -
           !Ref CFDeployerRole
-  S3BucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref S3BucketWebsite
-      PolicyDocument:
-        Statement:
-          -
-            Action:
-              - s3:*
-            Effect: Allow
-            Resource:
-              - !Sub arn:aws:s3:::${S3BucketWebsite}
-              - !Sub arn:aws:s3:::${S3BucketWebsite}/*
-            Principal:
-              AWS:
-                - !Sub arn:aws:iam::${ToolsAccount}:role/${ProjectName}-codepipeline-role
 
           
        

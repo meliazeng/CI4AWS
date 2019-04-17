@@ -32,6 +32,9 @@ Parameters:
   CMKARN:
     Description: ARN of the KMS CMK creates in Tools account
     Type: String
+  GithubToken:
+    Description: Token to access github repo
+    Type: String
   CrossAccountCondition:
     Description: Conditionally creates the resources for cross account access
     Type: String
@@ -122,7 +125,7 @@ Resources:
             build:
               commands:
                 - echo Build started on `date`
-                - aws cloudformation package --template-file template.yaml --s3-bucket $S3Bucket --s3-prefix $ProjectName/codebuild --output-template-file samtemplate.yaml
+                - aws cloudformation package --template-file template.yaml --s3-bucket $S3Bucket --s3-prefix ${ProjectName}/codebuild --output-template-file samtemplate.yaml
           artifacts:
             files: samtemplate.yaml
             discard-paths: yes
@@ -280,8 +283,8 @@ Resources:
               RunOrder: 1
               Configuration:
                 Branch: master
-                OAuthToken: '***'
-                Owner: test
+                OAuthToken: ${GithubToken}
+                Owner: meliazeng
                 PollForSourceChanges: 'false'
                 Repo: awssam
               OutputArtifacts:
@@ -296,8 +299,8 @@ Resources:
               RunOrder: 1
               Configuration:
                 Branch: master
-                OAuthToken: '***'
-                Owner: test
+                OAuthToken: ${GithubToken}
+                Owner: meliazeng
                 PollForSourceChanges: 'false'
                 Repo: ChkLst
               OutputArtifacts:
@@ -386,6 +389,7 @@ Resources:
               Configuration:
                 ChangeSetName: !Sub ${ProjectName}-Sam-Test
                 ActionMode: CHANGE_SET_EXECUTE
+                OutputFileName: WebApiUrl
                 StackName: !Sub ${ProjectName}-Sam-Test
                 #RoleArn: !Sub arn:aws:iam::${TestAccount}:role/cloudformationdeployer-role
                 RoleArn:
@@ -397,6 +401,7 @@ Resources:
                 - Name: BuildOutput-Sam
               OutputArtifacts: 
                 - Name: DeployOutput-Sam
+                
               RunOrder: 3
               #RoleArn: !Sub arn:aws:iam::${TestAccount}:role/ToolsAcctCodePipelineCloudFormationRole
               RoleArn:
