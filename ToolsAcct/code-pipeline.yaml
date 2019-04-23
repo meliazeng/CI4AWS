@@ -399,7 +399,7 @@ Resources:
                   - !Ref AWS::NoValue
               InputArtifacts:
                 - Name: BuildOutput-Sam
-              OutputArtifacts: 
+              OutputArtifacts:
                 - Name: DeployOutput-Sam
                 
               RunOrder: 3
@@ -415,6 +415,8 @@ Resources:
                 Category: Deploy
                 Owner: AWS
                 Provider: S3
+                Access_key_id:
+                Secret_access_key:
                 Version: '1'
               RunOrder: 4
               Configuration:
